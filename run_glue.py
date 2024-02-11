@@ -57,6 +57,10 @@ MODEL_CLASSES = {
     'roberta': (RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer),
 }
 
+modeltype2path = {
+    'bert-base-cased': '/home/bw1822/nlp_checkpoints/bert/bert-base-cased',
+}
+
 
 def set_seed(args):
     random.seed(args.seed)
@@ -132,7 +136,7 @@ def train(args, train_dataset, model, tokenizer):
             else:
                 ##################################################
                 # TODO(cos598d): perform backward pass here
-                
+                loss.backward()
                 ##################################################
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
@@ -141,7 +145,7 @@ def train(args, train_dataset, model, tokenizer):
                 scheduler.step()  # Update learning rate schedule
                 ##################################################
                 # TODO(cos598d): perform a single optimization step (parameter update) by invoking the optimizer
-                
+                optimizer.step()
                 ##################################################
                 model.zero_grad()
                 global_step += 1
@@ -155,7 +159,8 @@ def train(args, train_dataset, model, tokenizer):
         
         ##################################################
         # TODO(cos598d): call evaluate() here to get the model performance after every epoch.
-
+        # You can use the evaluate() function defined below.
+        evaluate(args, model, tokenizer, prefix="")
         ##################################################
 
     return global_step, tr_loss / global_step
@@ -354,7 +359,9 @@ def main():
         raise ValueError("Output directory ({}) already exists and is not empty. Use --overwrite_output_dir to overcome.".format(args.output_dir))
 
     # set up (distributed) training
-    args.device = torch.device(f"cuda:{args.local_rank}" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+    #TODO: uncomment it for distributed training
+    # args.device = torch.device(f"cuda:{args.local_rank}" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+    args.device = torch.device(f"cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
     args.n_gpu = torch.cuda.device_count()
 
     # Setup logging
@@ -388,7 +395,7 @@ def main():
     ##################################################
     # TODO(cos598d): load the model using from_pretrained. Remember to pass in `config` as an argument.
     # If you pass in args.model_name_or_path (e.g. "bert-base-cased"), the model weights file will be downloaded from HuggingFace.
-
+    model = model_class.from_pretrained(modeltype2path[args.model_name_or_path], config=config)
     ##################################################
 
     if args.local_rank == 0:
